@@ -46,7 +46,7 @@ type Action =
   | { type: 'ANSWER_QUESTION'; payload: { questionId: string; selectedOptionId: string } }
   | { type: 'RETRY_LEVEL' }
   | { type: 'NEXT_LEVEL' }
-  | { type: 'FINISH_QUIZ_ATTEMPT' } // Renamed for clarity, triggers save
+  | { type: 'FINISH_QUIZ_ATTEMPT' } 
   | { type: 'RESET_QUIZ' };
 
 const initialState: AppState = {
@@ -65,7 +65,6 @@ const initialState: AppState = {
 
 const QuizContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action>, triggerSaveQuizResult: () => Promise<void> } | undefined>(undefined);
 
-// Define toast outside reducer to be accessible by triggerSaveQuizResult
 let notifyToast: ReturnType<typeof useToast>['toast'] | null = null;
 
 
@@ -147,23 +146,23 @@ function quizReducer(state: AppState, action: Action): AppState {
          }
       }
 
-      if (newLevelEndReason) { // A level end condition has been met
+      if (newLevelEndReason) { 
         if (levelPassed) {
-          newTotalQuizScore += newScore; // Add current level's score to total
+          newTotalQuizScore += newScore; 
           if (state.currentLevelIndex < state.selectedSubject.levels.length - 1) {
-            nextQuizState = 'level-complete'; // More levels to go
+            nextQuizState = 'level-complete'; 
           } else {
-            nextQuizState = 'quiz-complete'; // This was the last level
+            nextQuizState = 'quiz-complete'; 
             newLevelEndReason = 'quiz_completed_successfully';
           }
-        } else { // Level failed
+        } else { 
           nextQuizState = 'level-complete';
         }
-      } else if (nextQuestionIndex >= questionsInLevel) { // Fallback if no specific end reason but all questions answered
+      } else if (nextQuestionIndex >= questionsInLevel) { 
           const passed = newScore >= Math.ceil(questionsInLevel * level.passingThreshold);
           if (passed) {
               newTotalQuizScore += newScore;
-              levelPassed = true; // ensure it's marked as passed for summary
+              levelPassed = true; 
               newLevelEndReason = 'passed_by_threshold';
               if (state.currentLevelIndex < state.selectedSubject.levels.length - 1) {
                   nextQuizState = 'level-complete';
@@ -208,7 +207,7 @@ function quizReducer(state: AppState, action: Action): AppState {
         levelEndReason: undefined,
       };
     }
-    case 'FINISH_QUIZ_ATTEMPT': // This action effectively transitions to quiz-complete and implies saving
+    case 'FINISH_QUIZ_ATTEMPT': 
         return { 
             ...state, 
             quizState: 'quiz-complete', 
@@ -230,7 +229,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   
   if (!notifyToast) {
-    notifyToast = toast; // Assign toast to the module-level variable
+    notifyToast = toast; 
   }
 
 
@@ -257,13 +256,13 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         if (result.success) {
           notifyToast && notifyToast({
             title: 'Success!',
-            description: result.message || 'Your quiz result has been saved.',
+            description: result.message || 'Your quiz result has been saved to Firestore.',
             variant: 'default',
           });
         } else {
           notifyToast && notifyToast({
             title: 'Error Saving Result',
-            description: result.error || 'Could not save your quiz result to Google Sheets.',
+            description: result.error || 'Could not save your quiz result to Firestore.',
             variant: 'destructive',
           });
         }
@@ -278,12 +277,11 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Effect to trigger save when quiz becomes complete
   useEffect(() => {
     if (state.quizState === 'quiz-complete') {
       triggerSaveQuizResult();
     }
-  }, [state.quizState, state.totalQuizScore]); // Depend on totalQuizScore to re-trigger if it changes while already complete (unlikely but safe)
+  }, [state.quizState, state.totalQuizScore]);
 
 
   return (
