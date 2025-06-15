@@ -11,33 +11,41 @@ type QuizState =
   | 'loading'
   | 'subject-selection'
   | 'in-progress'
-  | 'remedial-session'
-  // | 'feedback' // Removed: Feedback is now shown at level end via summary
+  // | 'remedial-session' // Removed
   | 'level-complete'
   | 'quiz-complete';
+
+export type LevelEndReason = 
+  | 'zero_score_failure' 
+  | 'passed_3_of_3' 
+  | 'failed_after_extended' 
+  | 'passed_after_extended' 
+  | 'failed_by_threshold' 
+  | 'passed_by_threshold' 
+  | 'quiz_completed_successfully';
 
 interface AppState {
   quizState: QuizState;
   subjects: Subject[];
   selectedSubject: Subject | null;
   currentLevelIndex: number;
-  currentQuestionIndex: number; // Index within the current level's questions or remedial questions
-  userAnswers: UserAnswer[]; // Answers for the current attempt of a level
-  score: number; // Correct answers in the current level attempt
-  currentFeedback: { message: string; type: 'correct' | 'incorrect', explanation?: string } | null; // Kept for potential future use in summary, but not set per question.
-  isRemedialRound: boolean; // True if currently in a remedial session for a failed level
+  currentQuestionIndex: number;
+  userAnswers: UserAnswer[];
+  score: number; 
+  levelEndReason?: LevelEndReason;
+  // currentFeedback: { message: string; type: 'correct' | 'incorrect', explanation?: string } | null; // Removed
+  // isRemedialRound: boolean; // Removed
 }
 
 type Action =
   | { type: 'LOAD_SUBJECTS'; payload: Subject[] }
   | { type: 'SELECT_SUBJECT'; payload: string } // subjectId
   | { type: 'ANSWER_QUESTION'; payload: { questionId: string; selectedOptionId: string } }
-  // | { type: 'NEXT_QUESTION_OR_SUMMARY' } // Removed: Logic handled in ANSWER_QUESTION
-  | { type: 'START_REMEDIAL_SESSION' }
-  | { type: 'FINISH_REMEDIAL_SESSION' } 
+  // | { type: 'START_REMEDIAL_SESSION' } // Removed
+  // | { type: 'FINISH_REMEDIAL_SESSION' }  // Removed
   | { type: 'RETRY_LEVEL' }
   | { type: 'NEXT_LEVEL' }
-  | { type: 'FINISH_QUIZ' } 
+  | { type: 'FINISH_QUIZ' } // Kept for explicit quiz completion, though ANSWER_QUESTION might trigger quiz-complete
   | { type: 'RESET_QUIZ' }; 
 
 const initialState: AppState = {
@@ -48,8 +56,9 @@ const initialState: AppState = {
   currentQuestionIndex: 0,
   userAnswers: [],
   score: 0,
-  currentFeedback: null,
-  isRemedialRound: false,
+  levelEndReason: undefined,
+  // currentFeedback: null, // Removed
+  // isRemedialRound: false, // Removed
 };
 
 const QuizContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action> } | undefined>(undefined);
@@ -72,76 +81,88 @@ function quizReducer(state: AppState, action: Action): AppState {
     case 'ANSWER_QUESTION': {
       if (!state.selectedSubject) return state;
       const level = state.selectedSubject.levels[state.currentLevelIndex];
-      const questions = state.isRemedialRound ? (level.remedialQuestions || []) : level.questions;
-      const question = questions[state.currentQuestionIndex];
+      const question = level.questions[state.currentQuestionIndex];
       if (!question) return state;
 
       const isCorrect = question.correctOptionId === action.payload.selectedOptionId;
-      const newScore = isCorrect && !state.isRemedialRound ? state.score + 1 : state.score;
+      const newScore = isCorrect ? state.score + 1 : state.score;
       
       const updatedUserAnswers = [...state.userAnswers, { questionId: action.payload.questionId, selectedOptionId: action.payload.selectedOptionId, isCorrect }];
+      
+      const questionsInLevel = level.questions.length;
+      const questionsAnsweredThisAttempt = updatedUserAnswers.length;
 
-      if (state.currentQuestionIndex < questions.length - 1) { // Not the last question
-        return {
-          ...state,
-          userAnswers: updatedUserAnswers,
-          score: newScore,
-          currentQuestionIndex: state.currentQuestionIndex + 1,
-          quizState: state.isRemedialRound ? 'remedial-session' : 'in-progress',
-          currentFeedback: null, 
-        };
-      } else { // Last question of the current set (main or remedial)
-        const finalStateForLevel = {
-          ...state,
-          userAnswers: updatedUserAnswers,
-          score: newScore,
-          currentFeedback: null, 
-        };
+      const INITIAL_PHASE_QUESTIONS = 3;
+      const EXTENDED_PHASE_TOTAL_QUESTIONS = 5;
+      const MIN_SCORE_TO_PASS_EXTENDED = 3;
 
-        if (state.isRemedialRound) {
-          return { ...finalStateForLevel, quizState: 'level-complete' }; // Go to summary after remedial
-        }
-        
-        const passingScore = Math.ceil(level.questions.length * level.passingThreshold);
-        if (finalStateForLevel.score >= passingScore) { // Passed level
-          if (state.currentLevelIndex < state.selectedSubject.levels.length - 1) {
-            return { ...finalStateForLevel, quizState: 'level-complete' }; 
-          } else {
-            return { ...finalStateForLevel, quizState: 'quiz-complete' };
+      let nextQuizState: QuizState = 'in-progress';
+      let nextQuestionIndex = state.currentQuestionIndex + 1;
+      let newLevelEndReason: LevelEndReason | undefined = undefined;
+
+      // Special 3/5 question logic applies if level has enough questions
+      if (questionsInLevel >= EXTENDED_PHASE_TOTAL_QUESTIONS) {
+        if (questionsAnsweredThisAttempt === INITIAL_PHASE_QUESTIONS) { // After 3rd question
+          if (newScore === 0) {
+            nextQuizState = 'level-complete';
+            newLevelEndReason = 'zero_score_failure';
+          } else if (newScore === INITIAL_PHASE_QUESTIONS) { // 3/3 correct
+            nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
+            newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_3_of_3';
+          } else { // Score 1 or 2 after 3 questions, continue to extended phase
+            if (nextQuestionIndex < questionsInLevel) {
+              // Continue to 4th question
+            } else { // Should not happen if questionsInLevel >= EXTENDED_PHASE_TOTAL_QUESTIONS
+              nextQuizState = 'level-complete'; // Fallback, ran out of Qs unexpectedly
+              newLevelEndReason = 'failed_by_threshold'; // Or some error state
+            }
           }
-        } else { // Failed level
-            return { ...finalStateForLevel, quizState: 'level-complete' };
+        } else if (questionsAnsweredThisAttempt > INITIAL_PHASE_QUESTIONS && questionsAnsweredThisAttempt === EXTENDED_PHASE_TOTAL_QUESTIONS) { // After 5th question
+          if (newScore >= MIN_SCORE_TO_PASS_EXTENDED) {
+            nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
+            newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_after_extended';
+          } else {
+            nextQuizState = 'level-complete';
+            newLevelEndReason = 'failed_after_extended';
+          }
+        } else if (questionsAnsweredThisAttempt < questionsInLevel) {
+          // Continue to next question (e.g. 1st, 2nd, 4th, or beyond 5th if level is longer)
+          // newQuizState remains 'in-progress'
+        } else { // Last question of a level >= 5 questions
+          // This path is hit if the level is exactly 5 questions long and we are at the 5th (handled above)
+          // or if the level is longer than 5 questions and this is the last one.
+          // If an outcome wasn't decided by special logic, use threshold.
+           const passedByThreshold = newScore >= Math.ceil(questionsInLevel * level.passingThreshold);
+           if (passedByThreshold) {
+               nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
+               newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_by_threshold';
+           } else {
+               nextQuizState = 'level-complete';
+               newLevelEndReason = 'failed_by_threshold';
+           }
+        }
+      } else { // Level has < 5 questions, use standard threshold logic
+        if (questionsAnsweredThisAttempt < questionsInLevel) {
+          // newQuizState remains 'in-progress'
+        } else { // Last question of a short level
+          const passed = newScore >= Math.ceil(questionsInLevel * level.passingThreshold);
+          if (passed) {
+            nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
+            newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_by_threshold';
+          } else {
+            nextQuizState = 'level-complete';
+            newLevelEndReason = 'failed_by_threshold';
+          }
         }
       }
-    }
-    // NEXT_QUESTION_OR_SUMMARY case removed as its logic is integrated into ANSWER_QUESTION
-    case 'START_REMEDIAL_SESSION': {
-      if (!state.selectedSubject) return state;
-      const level = state.selectedSubject.levels[state.currentLevelIndex];
-      if (!level.remedialQuestions || level.remedialQuestions.length === 0) {
-        return { ...state, quizState: 'level-complete' }; 
-      }
+      
       return {
         ...state,
-        isRemedialRound: true,
-        quizState: 'remedial-session',
-        currentQuestionIndex: 0,
-        userAnswers: [], 
-        currentFeedback: null,
-      };
-    }
-    case 'FINISH_REMEDIAL_SESSION': {
-      // This action is called from QuizSummary when user finishes remedial and wants to retry main level.
-      // However, the logic now transitions directly from ANSWER_QUESTION (last remedial) to 'level-complete'.
-      // QuizSummary will then offer retry based on 'isRemedialRound' being true at that point.
-      // Let's simplify and assume 'RETRY_LEVEL' covers this.
-      // This case might become redundant or used if a different flow is introduced.
-      // For now, it should lead to a state where user can retry.
-      return {
-        ...state,
-        isRemedialRound: false, // Important to reset this
-        quizState: 'level-complete', // Show summary, which should now offer "Retry Level"
-        currentFeedback: null,
+        userAnswers: updatedUserAnswers,
+        score: newScore,
+        currentQuestionIndex: nextQuizState === 'in-progress' ? nextQuestionIndex : state.currentQuestionIndex,
+        quizState: nextQuizState,
+        levelEndReason: newLevelEndReason || state.levelEndReason, // Persist if set earlier in multi-stage logic
       };
     }
     case 'RETRY_LEVEL':
@@ -151,8 +172,7 @@ function quizReducer(state: AppState, action: Action): AppState {
         currentQuestionIndex: 0,
         userAnswers: [],
         score: 0,
-        currentFeedback: null,
-        isRemedialRound: false,
+        levelEndReason: undefined,
       };
     case 'NEXT_LEVEL': {
       if (!state.selectedSubject || state.currentLevelIndex >= state.selectedSubject.levels.length - 1) return state; 
@@ -163,12 +183,11 @@ function quizReducer(state: AppState, action: Action): AppState {
         userAnswers: [],
         score: 0,
         quizState: 'in-progress',
-        currentFeedback: null,
-        isRemedialRound: false,
+        levelEndReason: undefined,
       };
     }
-    case 'FINISH_QUIZ': 
-      return { ...state, quizState: 'quiz-complete', currentFeedback: null };
+    case 'FINISH_QUIZ': // This might be triggered by QuizSummary if it decides completion
+      return { ...state, quizState: 'quiz-complete', levelEndReason: 'quiz_completed_successfully' };
     case 'RESET_QUIZ':
       return { ...initialState, subjects: state.subjects, quizState: 'subject-selection' };
     default:
@@ -204,4 +223,3 @@ export const useQuiz = () => {
   }
   return context;
 };
-

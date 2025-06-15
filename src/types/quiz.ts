@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 
 export interface Option {
@@ -17,8 +18,8 @@ export interface Level {
   id: string;
   name: string;
   questions: Question[];
-  passingThreshold: number; // e.g., 0.7 for 70%
-  remedialQuestions?: Question[]; // Optional simpler questions if level failed
+  passingThreshold: number; // e.g., 0.7 for 70%. Used for levels not following the 3/5 question dynamic logic.
+  // remedialQuestions?: Question[]; // Removed
 }
 
 export interface Subject {
