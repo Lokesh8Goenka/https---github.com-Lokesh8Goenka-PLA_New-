@@ -7,21 +7,21 @@ import type { Subject, Level, Question, UserAnswer, Option } from '@/types/quiz'
 import { quizSubjects } from '@/data/quiz-data';
 import { useToast } from '@/hooks/use-toast';
 
-type QuizState = 
+type QuizState =
   | 'loading'
+  | 'user-info-collection' // New state for collecting user's name and class
   | 'subject-selection'
   | 'in-progress'
-  // | 'remedial-session' // Removed
   | 'level-complete'
   | 'quiz-complete';
 
-export type LevelEndReason = 
-  | 'zero_score_failure' 
-  | 'passed_3_of_3' 
-  | 'failed_after_extended' 
-  | 'passed_after_extended' 
-  | 'failed_by_threshold' 
-  | 'passed_by_threshold' 
+export type LevelEndReason =
+  | 'zero_score_failure'
+  | 'passed_3_of_3'
+  | 'failed_after_extended'
+  | 'passed_after_extended'
+  | 'failed_by_threshold'
+  | 'passed_by_threshold'
   | 'quiz_completed_successfully';
 
 interface AppState {
@@ -31,34 +31,35 @@ interface AppState {
   currentLevelIndex: number;
   currentQuestionIndex: number;
   userAnswers: UserAnswer[];
-  score: number; 
+  score: number; // Score for the current level attempt
+  totalQuizScore: number; // Total score accumulated across passed levels for the current subject
+  userName: string | null; // User's name
+  userClass: string | null; // User's class
   levelEndReason?: LevelEndReason;
-  // currentFeedback: { message: string; type: 'correct' | 'incorrect', explanation?: string } | null; // Removed
-  // isRemedialRound: boolean; // Removed
 }
 
 type Action =
   | { type: 'LOAD_SUBJECTS'; payload: Subject[] }
+  | { type: 'SUBMIT_USER_INFO'; payload: { name: string; className: string } } // New action
   | { type: 'SELECT_SUBJECT'; payload: string } // subjectId
   | { type: 'ANSWER_QUESTION'; payload: { questionId: string; selectedOptionId: string } }
-  // | { type: 'START_REMEDIAL_SESSION' } // Removed
-  // | { type: 'FINISH_REMEDIAL_SESSION' }  // Removed
   | { type: 'RETRY_LEVEL' }
   | { type: 'NEXT_LEVEL' }
-  | { type: 'FINISH_QUIZ' } // Kept for explicit quiz completion, though ANSWER_QUESTION might trigger quiz-complete
-  | { type: 'RESET_QUIZ' }; 
+  | { type: 'FINISH_QUIZ' }
+  | { type: 'RESET_QUIZ' };
 
 const initialState: AppState = {
-  quizState: 'loading',
+  quizState: 'loading', // Start in loading state
   subjects: [],
   selectedSubject: null,
   currentLevelIndex: 0,
   currentQuestionIndex: 0,
   userAnswers: [],
   score: 0,
+  totalQuizScore: 0,
+  userName: null,
+  userClass: null,
   levelEndReason: undefined,
-  // currentFeedback: null, // Removed
-  // isRemedialRound: false, // Removed
 };
 
 const QuizContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action> } | undefined>(undefined);
@@ -66,13 +67,26 @@ const QuizContext = createContext<{ state: AppState; dispatch: React.Dispatch<Ac
 function quizReducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'LOAD_SUBJECTS':
-      return { ...initialState, subjects: action.payload, quizState: 'subject-selection' };
+      return {
+        ...initialState, // Reset to initial defaults
+        subjects: action.payload,
+        quizState: 'user-info-collection', // Transition to user info collection
+      };
+    case 'SUBMIT_USER_INFO':
+      return {
+        ...state,
+        userName: action.payload.name,
+        userClass: action.payload.className,
+        quizState: 'subject-selection', // Transition to subject selection
+      };
     case 'SELECT_SUBJECT': {
       const subject = state.subjects.find(s => s.id === action.payload);
-      return subject ? { 
-        ...initialState, 
-        subjects: state.subjects, 
-        selectedSubject: subject, 
+      return subject ? {
+        ...initialState, // Resets score, totalQuizScore, level/question indices etc.
+        subjects: state.subjects, // Keep loaded subjects
+        userName: state.userName, // Persist user info
+        userClass: state.userClass, // Persist user info
+        selectedSubject: subject,
         quizState: 'in-progress',
         currentLevelIndex: 0,
         currentQuestionIndex: 0,
@@ -86,9 +100,7 @@ function quizReducer(state: AppState, action: Action): AppState {
 
       const isCorrect = question.correctOptionId === action.payload.selectedOptionId;
       const newScore = isCorrect ? state.score + 1 : state.score;
-      
       const updatedUserAnswers = [...state.userAnswers, { questionId: action.payload.questionId, selectedOptionId: action.payload.selectedOptionId, isCorrect }];
-      
       const questionsInLevel = level.questions.length;
       const questionsAnsweredThisAttempt = updatedUserAnswers.length;
 
@@ -99,70 +111,88 @@ function quizReducer(state: AppState, action: Action): AppState {
       let nextQuizState: QuizState = 'in-progress';
       let nextQuestionIndex = state.currentQuestionIndex + 1;
       let newLevelEndReason: LevelEndReason | undefined = undefined;
+      let newTotalQuizScore = state.totalQuizScore;
 
-      // Special 3/5 question logic applies if level has enough questions
       if (questionsInLevel >= EXTENDED_PHASE_TOTAL_QUESTIONS) {
-        if (questionsAnsweredThisAttempt === INITIAL_PHASE_QUESTIONS) { // After 3rd question
+        if (questionsAnsweredThisAttempt === INITIAL_PHASE_QUESTIONS) {
           if (newScore === 0) {
             nextQuizState = 'level-complete';
             newLevelEndReason = 'zero_score_failure';
-          } else if (newScore === INITIAL_PHASE_QUESTIONS) { // 3/3 correct
+          } else if (newScore === INITIAL_PHASE_QUESTIONS) {
             nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
             newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_3_of_3';
-          } else { // Score 1 or 2 after 3 questions, continue to extended phase
-            if (nextQuestionIndex < questionsInLevel) {
-              // Continue to 4th question
-            } else { // Should not happen if questionsInLevel >= EXTENDED_PHASE_TOTAL_QUESTIONS
-              nextQuizState = 'level-complete'; // Fallback, ran out of Qs unexpectedly
-              newLevelEndReason = 'failed_by_threshold'; // Or some error state
+            if (newLevelEndReason === 'passed_3_of_3' || newLevelEndReason === 'quiz_completed_successfully') {
+              newTotalQuizScore += newScore;
             }
           }
-        } else if (questionsAnsweredThisAttempt > INITIAL_PHASE_QUESTIONS && questionsAnsweredThisAttempt === EXTENDED_PHASE_TOTAL_QUESTIONS) { // After 5th question
+        } else if (questionsAnsweredThisAttempt > INITIAL_PHASE_QUESTIONS && questionsAnsweredThisAttempt === EXTENDED_PHASE_TOTAL_QUESTIONS) {
           if (newScore >= MIN_SCORE_TO_PASS_EXTENDED) {
             nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
             newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_after_extended';
+            if (newLevelEndReason === 'passed_after_extended' || newLevelEndReason === 'quiz_completed_successfully') {
+              newTotalQuizScore += newScore;
+            }
           } else {
             nextQuizState = 'level-complete';
             newLevelEndReason = 'failed_after_extended';
           }
-        } else if (questionsAnsweredThisAttempt < questionsInLevel) {
-          // Continue to next question (e.g. 1st, 2nd, 4th, or beyond 5th if level is longer)
-          // newQuizState remains 'in-progress'
-        } else { // Last question of a level >= 5 questions
-          // This path is hit if the level is exactly 5 questions long and we are at the 5th (handled above)
-          // or if the level is longer than 5 questions and this is the last one.
-          // If an outcome wasn't decided by special logic, use threshold.
+        }
+      }
+      
+      // This block handles levels with < 5 Qs OR levels >= 5 Qs that didn't hit early exit/fail from 3/5 logic,
+      // and it's the last question of the current attempt for the level.
+      if (nextQuizState === 'in-progress' && questionsAnsweredThisAttempt === questionsInLevel) {
+         const passedByThreshold = newScore >= Math.ceil(questionsInLevel * level.passingThreshold);
+         if (passedByThreshold) {
+             nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
+             newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_by_threshold';
+             if (newLevelEndReason === 'passed_by_threshold' || newLevelEndReason === 'quiz_completed_successfully') {
+               newTotalQuizScore += newScore;
+             }
+         } else {
+             nextQuizState = 'level-complete';
+             newLevelEndReason = 'failed_by_threshold';
+         }
+      }
+
+
+      // Fallback for any unhandled end-of-level conditions if state is still in-progress but no more questions
+      if (nextQuizState === 'in-progress' && nextQuestionIndex >= questionsInLevel) {
+        // This means all questions for the current configuration (initial, extended, or full short level) have been answered.
+        // Re-evaluate based on score if an end reason wasn't set by specific 3/5 logic.
+        // This primarily covers levels >=5 questions that went past 5Q and didn't hit an end reason yet.
+        if (!newLevelEndReason && questionsInLevel >= EXTENDED_PHASE_TOTAL_QUESTIONS && questionsAnsweredThisAttempt >= EXTENDED_PHASE_TOTAL_QUESTIONS ) {
            const passedByThreshold = newScore >= Math.ceil(questionsInLevel * level.passingThreshold);
            if (passedByThreshold) {
                nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
                newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_by_threshold';
+               newTotalQuizScore += newScore;
            } else {
                nextQuizState = 'level-complete';
                newLevelEndReason = 'failed_by_threshold';
            }
-        }
-      } else { // Level has < 5 questions, use standard threshold logic
-        if (questionsAnsweredThisAttempt < questionsInLevel) {
-          // newQuizState remains 'in-progress'
-        } else { // Last question of a short level
-          const passed = newScore >= Math.ceil(questionsInLevel * level.passingThreshold);
-          if (passed) {
-            nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
-            newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_by_threshold';
-          } else {
-            nextQuizState = 'level-complete';
-            newLevelEndReason = 'failed_by_threshold';
-          }
+        } else if (!newLevelEndReason) { // For short levels or if logic above didn't set a reason
+            const passed = newScore >= Math.ceil(questionsInLevel * level.passingThreshold);
+            if (passed) {
+                nextQuizState = state.currentLevelIndex < state.selectedSubject.levels.length - 1 ? 'level-complete' : 'quiz-complete';
+                newLevelEndReason = nextQuizState === 'quiz-complete' ? 'quiz_completed_successfully' : 'passed_by_threshold';
+                newTotalQuizScore += newScore;
+            } else {
+                nextQuizState = 'level-complete';
+                newLevelEndReason = 'failed_by_threshold';
+            }
         }
       }
-      
+
+
       return {
         ...state,
         userAnswers: updatedUserAnswers,
         score: newScore,
         currentQuestionIndex: nextQuizState === 'in-progress' ? nextQuestionIndex : state.currentQuestionIndex,
         quizState: nextQuizState,
-        levelEndReason: newLevelEndReason || state.levelEndReason, // Persist if set earlier in multi-stage logic
+        levelEndReason: newLevelEndReason || state.levelEndReason,
+        totalQuizScore: newTotalQuizScore,
       };
     }
     case 'RETRY_LEVEL':
@@ -171,25 +201,31 @@ function quizReducer(state: AppState, action: Action): AppState {
         quizState: 'in-progress',
         currentQuestionIndex: 0,
         userAnswers: [],
-        score: 0,
+        score: 0, // Reset score for the retry attempt
         levelEndReason: undefined,
+        // totalQuizScore remains, as the previous attempt's score (if failed) was not added
       };
     case 'NEXT_LEVEL': {
-      if (!state.selectedSubject || state.currentLevelIndex >= state.selectedSubject.levels.length - 1) return state; 
+      if (!state.selectedSubject || state.currentLevelIndex >= state.selectedSubject.levels.length - 1) return state;
       return {
         ...state,
         currentLevelIndex: state.currentLevelIndex + 1,
         currentQuestionIndex: 0,
         userAnswers: [],
-        score: 0,
+        score: 0, // Reset score for the new level
         quizState: 'in-progress',
         levelEndReason: undefined,
+        // totalQuizScore has already been updated with the passed level's score
       };
     }
-    case 'FINISH_QUIZ': // This might be triggered by QuizSummary if it decides completion
-      return { ...state, quizState: 'quiz-complete', levelEndReason: 'quiz_completed_successfully' };
+    case 'FINISH_QUIZ':
+      return { ...state, quizState: 'quiz-complete', levelEndReason: state.levelEndReason || 'quiz_completed_successfully' };
     case 'RESET_QUIZ':
-      return { ...initialState, subjects: state.subjects, quizState: 'subject-selection' };
+      return {
+        ...initialState, // Resets to loading, clears user name/class, scores
+        subjects: state.subjects, // Keep loaded subjects
+        quizState: 'user-info-collection', // Go back to user info form
+      };
     default:
       return state;
   }
@@ -200,14 +236,22 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    dispatch({ type: 'LOAD_SUBJECTS', payload: quizSubjects });
-  }, []);
+    // Load subjects only once or if they are not present
+    if (state.subjects.length === 0) {
+      dispatch({ type: 'LOAD_SUBJECTS', payload: quizSubjects });
+    }
+  }, [state.subjects.length]);
+
 
   useEffect(() => {
-    if (state.quizState === 'loading' && state.subjects.length === 0) {
-      // Potential timeout for loading error
+    if (state.quizState === 'loading' && state.subjects.length > 0 && !state.userName) {
+      // This ensures that if subjects are loaded, we move to user-info-collection
+      // This might be redundant if LOAD_SUBJECTS action handles the transition properly.
+      // Keeping it simple by having LOAD_SUBJECTS set the state to user-info-collection.
+    } else if (state.quizState === 'loading' && state.subjects.length === 0) {
+      // Potential timeout for loading error (currently not implemented)
     }
-  }, [state.quizState, state.subjects, toast]);
+  }, [state.quizState, state.subjects, state.userName, toast]);
 
   return (
     <QuizContext.Provider value={{ state, dispatch }}>

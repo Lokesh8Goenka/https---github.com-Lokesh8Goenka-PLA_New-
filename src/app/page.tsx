@@ -5,8 +5,9 @@ import { QuizProvider, useQuiz } from '@/context/QuizContext';
 import SubjectSelector from '@/components/quiz/SubjectSelector';
 import QuizRunner from '@/components/quiz/QuizRunner';
 import QuizSummary from '@/components/quiz/QuizSummary';
+import UserInfoForm from '@/components/quiz/UserInfoForm'; // Import the new component
 import { Toaster } from "@/components/ui/toaster";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 function QuizAppContent() {
   const { state } = useQuiz();
@@ -26,12 +27,16 @@ function QuizAppContent() {
       </div>
     );
   }
+
+  if (state.quizState === 'user-info-collection') { // New case
+    return <UserInfoForm />;
+  }
   
   if (state.quizState === 'subject-selection') {
     return <SubjectSelector />;
   }
 
-  if (state.quizState === 'in-progress' || state.quizState === 'remedial-session') {
+  if (state.quizState === 'in-progress') { // Removed 'remedial-session'
     return <QuizRunner />;
   }
   
@@ -43,6 +48,12 @@ function QuizAppContent() {
 }
 
 export default function Home() {
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
+
   return (
     <QuizProvider>
       <main className="flex flex-col items-center min-h-screen p-4 sm:p-6 md:p-8 bg-background text-foreground">
@@ -50,11 +61,12 @@ export default function Home() {
           <QuizAppContent />
         </div>
         <footer className="w-full text-center py-8 mt-auto">
-          <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Quiz Ascent. Ascend to new heights of knowledge.</p>
+          {currentYear && (
+            <p className="text-sm text-muted-foreground">&copy; {currentYear} Quiz Ascent. Ascend to new heights of knowledge.</p>
+          )}
         </footer>
       </main>
       <Toaster />
     </QuizProvider>
   );
 }
-
