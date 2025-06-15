@@ -12,11 +12,9 @@ function QuizAppContent() {
   const { state } = useQuiz();
 
   useEffect(() => {
-    // Scroll to top when quiz state changes, useful for transitions between views
     window.scrollTo(0, 0);
   }, [state.quizState, state.currentQuestionIndex, state.currentLevelIndex]);
 
-  // Loading state can be more sophisticated, e.g. a spinner component
   if (state.quizState === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px]">
@@ -32,15 +30,15 @@ function QuizAppContent() {
   if (state.quizState === 'subject-selection') {
     return <SubjectSelector />;
   }
-  // 'in-progress' and 'remedial-session' use QuizRunner. 'feedback' state is handled within QuizRunner.
-  if (state.quizState === 'in-progress' || state.quizState === 'remedial-session' || state.quizState === 'feedback') {
+
+  if (state.quizState === 'in-progress' || state.quizState === 'remedial-session') {
     return <QuizRunner />;
   }
+  
   if (state.quizState === 'level-complete' || state.quizState === 'quiz-complete') {
     return <QuizSummary />;
   }
   
-  // Fallback for any unhandled state
   return <p className="text-center text-lg text-destructive">An unexpected error occurred. Please try refreshing.</p>;
 }
 
@@ -48,7 +46,7 @@ export default function Home() {
   return (
     <QuizProvider>
       <main className="flex flex-col items-center min-h-screen p-4 sm:p-6 md:p-8 bg-background text-foreground">
-        <div className="w-full max-w-3xl mt-8 mb-8"> {/* Increased max-width for better layout on larger screens */}
+        <div className="w-full max-w-3xl mt-8 mb-8">
           <QuizAppContent />
         </div>
         <footer className="w-full text-center py-8 mt-auto">
@@ -59,3 +57,4 @@ export default function Home() {
     </QuizProvider>
   );
 }
+

@@ -12,7 +12,7 @@ type QuizState =
   | 'subject-selection'
   | 'in-progress'
   | 'remedial-session'
-  | 'feedback' // State to show feedback before moving to next question or summary
+  // | 'feedback' // Removed: Feedback is now shown at level end via summary
   | 'level-complete'
   | 'quiz-complete';
 
@@ -24,7 +24,7 @@ interface AppState {
   currentQuestionIndex: number; // Index within the current level's questions or remedial questions
   userAnswers: UserAnswer[]; // Answers for the current attempt of a level
   score: number; // Correct answers in the current level attempt
-  currentFeedback: { message: string; type: 'correct' | 'incorrect', explanation?: string } | null;
+  currentFeedback: { message: string; type: 'correct' | 'incorrect', explanation?: string } | null; // Kept for potential future use in summary, but not set per question.
   isRemedialRound: boolean; // True if currently in a remedial session for a failed level
 }
 
@@ -32,13 +32,13 @@ type Action =
   | { type: 'LOAD_SUBJECTS'; payload: Subject[] }
   | { type: 'SELECT_SUBJECT'; payload: string } // subjectId
   | { type: 'ANSWER_QUESTION'; payload: { questionId: string; selectedOptionId: string } }
-  | { type: 'NEXT_QUESTION_OR_SUMMARY' }
+  // | { type: 'NEXT_QUESTION_OR_SUMMARY' } // Removed: Logic handled in ANSWER_QUESTION
   | { type: 'START_REMEDIAL_SESSION' }
-  | { type: 'FINISH_REMEDIAL_SESSION' } // After remedial, typically retry level
+  | { type: 'FINISH_REMEDIAL_SESSION' } 
   | { type: 'RETRY_LEVEL' }
   | { type: 'NEXT_LEVEL' }
-  | { type: 'FINISH_QUIZ' } // Quiz fully completed or user chose to end
-  | { type: 'RESET_QUIZ' }; // Back to subject selection
+  | { type: 'FINISH_QUIZ' } 
+  | { type: 'RESET_QUIZ' }; 
 
 const initialState: AppState = {
   quizState: 'loading',
@@ -79,72 +79,68 @@ function quizReducer(state: AppState, action: Action): AppState {
       const isCorrect = question.correctOptionId === action.payload.selectedOptionId;
       const newScore = isCorrect && !state.isRemedialRound ? state.score + 1 : state.score;
       
-      return {
-        ...state,
-        userAnswers: [...state.userAnswers, { questionId: action.payload.questionId, selectedOptionId: action.payload.selectedOptionId, isCorrect }],
-        score: newScore,
-        quizState: 'feedback',
-        currentFeedback: {
-          message: isCorrect ? 'Correct!' : 'Incorrect!',
-          type: isCorrect ? 'correct' : 'incorrect',
-          explanation: question.explanation,
-        }
-      };
-    }
-    case 'NEXT_QUESTION_OR_SUMMARY': {
-      if (!state.selectedSubject) return state;
-      const level = state.selectedSubject.levels[state.currentLevelIndex];
-      const questions = state.isRemedialRound ? (level.remedialQuestions || []) : level.questions;
-      
-      if (state.currentQuestionIndex < questions.length - 1) {
-        return { 
-          ...state, 
-          currentQuestionIndex: state.currentQuestionIndex + 1, 
-          quizState: 'in-progress', // or 'remedial-session' if isRemedialRound
-          currentFeedback: null 
+      const updatedUserAnswers = [...state.userAnswers, { questionId: action.payload.questionId, selectedOptionId: action.payload.selectedOptionId, isCorrect }];
+
+      if (state.currentQuestionIndex < questions.length - 1) { // Not the last question
+        return {
+          ...state,
+          userAnswers: updatedUserAnswers,
+          score: newScore,
+          currentQuestionIndex: state.currentQuestionIndex + 1,
+          quizState: state.isRemedialRound ? 'remedial-session' : 'in-progress',
+          currentFeedback: null, 
         };
       } else { // Last question of the current set (main or remedial)
+        const finalStateForLevel = {
+          ...state,
+          userAnswers: updatedUserAnswers,
+          score: newScore,
+          currentFeedback: null, 
+        };
+
         if (state.isRemedialRound) {
-          return { ...state, quizState: 'level-complete', currentFeedback: null }; // End of remedial, triggers FINISH_REMEDIAL_SESSION logic
+          return { ...finalStateForLevel, quizState: 'level-complete' }; // Go to summary after remedial
         }
-        // End of main level questions
+        
         const passingScore = Math.ceil(level.questions.length * level.passingThreshold);
-        if (state.score >= passingScore) { // Passed level
+        if (finalStateForLevel.score >= passingScore) { // Passed level
           if (state.currentLevelIndex < state.selectedSubject.levels.length - 1) {
-            // More levels exist
-            return { ...state, quizState: 'level-complete', currentFeedback: null }; // Triggers NEXT_LEVEL
+            return { ...finalStateForLevel, quizState: 'level-complete' }; 
           } else {
-            // Last level passed, quiz complete
-            return { ...state, quizState: 'quiz-complete', currentFeedback: null };
+            return { ...finalStateForLevel, quizState: 'quiz-complete' };
           }
         } else { // Failed level
-            return { ...state, quizState: 'level-complete', currentFeedback: null }; // Triggers remedial or retry options
+            return { ...finalStateForLevel, quizState: 'level-complete' };
         }
       }
     }
+    // NEXT_QUESTION_OR_SUMMARY case removed as its logic is integrated into ANSWER_QUESTION
     case 'START_REMEDIAL_SESSION': {
       if (!state.selectedSubject) return state;
       const level = state.selectedSubject.levels[state.currentLevelIndex];
       if (!level.remedialQuestions || level.remedialQuestions.length === 0) {
-        // No remedial questions, effectively means fail state to retry or quit
-        return { ...state, quizState: 'level-complete' }; // This will show summary for failed level
+        return { ...state, quizState: 'level-complete' }; 
       }
       return {
         ...state,
         isRemedialRound: true,
         quizState: 'remedial-session',
         currentQuestionIndex: 0,
-        userAnswers: [], // Reset answers for remedial round
-        // score is not reset as remedial doesn't affect main score
+        userAnswers: [], 
         currentFeedback: null,
       };
     }
     case 'FINISH_REMEDIAL_SESSION': {
-      // After remedial, always offer to retry the main level. Score/answers for main level are preserved.
+      // This action is called from QuizSummary when user finishes remedial and wants to retry main level.
+      // However, the logic now transitions directly from ANSWER_QUESTION (last remedial) to 'level-complete'.
+      // QuizSummary will then offer retry based on 'isRemedialRound' being true at that point.
+      // Let's simplify and assume 'RETRY_LEVEL' covers this.
+      // This case might become redundant or used if a different flow is introduced.
+      // For now, it should lead to a state where user can retry.
       return {
         ...state,
-        isRemedialRound: false,
-        quizState: 'level-complete', // Go to summary to offer retry
+        isRemedialRound: false, // Important to reset this
+        quizState: 'level-complete', // Show summary, which should now offer "Retry Level"
         currentFeedback: null,
       };
     }
@@ -159,7 +155,7 @@ function quizReducer(state: AppState, action: Action): AppState {
         isRemedialRound: false,
       };
     case 'NEXT_LEVEL': {
-      if (!state.selectedSubject || state.currentLevelIndex >= state.selectedSubject.levels.length - 1) return state; // Should not happen if logic is correct
+      if (!state.selectedSubject || state.currentLevelIndex >= state.selectedSubject.levels.length - 1) return state; 
       return {
         ...state,
         currentLevelIndex: state.currentLevelIndex + 1,
@@ -171,7 +167,7 @@ function quizReducer(state: AppState, action: Action): AppState {
         isRemedialRound: false,
       };
     }
-    case 'FINISH_QUIZ': // User chose to end or quiz naturally ended
+    case 'FINISH_QUIZ': 
       return { ...state, quizState: 'quiz-complete', currentFeedback: null };
     case 'RESET_QUIZ':
       return { ...initialState, subjects: state.subjects, quizState: 'subject-selection' };
@@ -185,14 +181,12 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Simulate loading subjects, in a real app this might be an API call
     dispatch({ type: 'LOAD_SUBJECTS', payload: quizSubjects });
   }, []);
 
-  // Error handling example (not fully utilized in this simple reducer)
   useEffect(() => {
     if (state.quizState === 'loading' && state.subjects.length === 0) {
-      // Could add a timeout here to show error if loading takes too long
+      // Potential timeout for loading error
     }
   }, [state.quizState, state.subjects, toast]);
 
@@ -210,3 +204,4 @@ export const useQuiz = () => {
   }
   return context;
 };
+
