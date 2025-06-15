@@ -42,7 +42,7 @@ export const quizSubjects: Subject[] = [
           { id: 'h3q2', text: 'The Cold War was primarily a geopolitical tension between which two major powers?', options: [{id: 'a', text: 'USA and China'}, {id: 'b', text: 'USA and Soviet Union'}, {id: 'c', text: 'UK and Germany'}], correctOptionId: 'b', explanation: 'The Cold War was a period of geopolitical tension between the United States and the Soviet Union and their respective allies.' },
           { id: 'h3q3', text: 'Who was the first person to walk on the Moon?', options: [{id: 'a', text: 'Buzz Aldrin'}, {id: 'b', text: 'Yuri Gagarin'}, {id: 'c', text: 'Neil Armstrong'}], correctOptionId: 'c', explanation: 'Neil Armstrong was the first person to walk on the Moon during the Apollo 11 mission in 1969.'},
           { id: 'h3q4', text: 'The fall of the Berlin Wall in 1989 symbolized the end of what?', options: [{id: 'a', text: 'World War II'}, {id: 'b', text: 'The Cold War'}, {id: 'c', text: 'The Space Race'}], correctOptionId: 'b', explanation: 'The fall of the Berlin Wall is widely seen as a pivotal moment symbolizing the end of the Cold War.'},
-          { id: 'h3q5', text: 'Apartheid was a system of institutionalised racial segregation that existed in which country?', options: [{id: 'a', text: 'India'}, {id: 'b', text: 'South Africa'}, {id: 'c', text: 'Brazil'}], correctOptionId: 'b', explanation: 'Apartheid was implemented in South Africa from 1948 to 1994.'}
+          { id: 'h3q5', text: 'Apartheid was a system of institutionalised racial segregation that existed in which country?', options: [{id: 'a', text: 'India'}, {id: 'b', text: 'South Africa'}, {id: 'c', 'Brazil'}], correctOptionId: 'b', explanation: 'Apartheid was implemented in South Africa from 1948 to 1994.'}
         ],
       },
     ],
@@ -55,38 +55,38 @@ export const quizSubjects: Subject[] = [
     levels: [
       {
         id: 'geo-l1-easy',
-        name: 'Level 1: World Features & Capitals (Easy)',
+        name: 'Level 1: Water Resources (Easy)',
         passingThreshold: 0.6,
         questions: [
-          { id: 'g1q1', text: 'What is the capital of France?', options: [{id: 'a', text: 'London'}, {id: 'b', text: 'Berlin'}, {id: 'c', text: 'Paris'}], correctOptionId: 'c', explanation: 'Paris is the capital and largest city of France.' },
-          { id: 'g1q2', text: 'What is the capital of Japan?', options: [{id: 'a', text: 'Beijing'}, {id: 'b', text: 'Seoul'}, {id: 'c', text: 'Tokyo'}], correctOptionId: 'c', explanation: 'Tokyo is the capital and largest city of Japan.' },
-          { id: 'g1q3', text: 'Which is traditionally considered the longest river in the world?', options: [{id: 'a', text: 'Amazon River'}, {id: 'b', text: 'Nile River'}, {id: 'c', text: 'Yangtze River'}], correctOptionId: 'b', explanation: 'The Nile River in Africa is traditionally cited as the longest river in the world.' },
-          { id: 'g1q4', text: 'Mount Everest, the world\'s highest peak, is located in which mountain range?', options: [{id: 'a', text: 'Andes'}, {id: 'b', text: 'Alps'}, {id: 'c', text: 'Himalayas'}], correctOptionId: 'c', explanation: 'Mount Everest is part of the Himalayas mountain range.' },
-          { id: 'g1q5', text: 'Which desert is the largest hot desert in the world?', options: [{id: 'a', text: 'Gobi Desert'}, {id: 'b', text: 'Sahara Desert'}, {id: 'c', text: 'Arabian Desert'}], correctOptionId: 'b', explanation: 'The Sahara Desert in Africa is the largest hot desert in the world.' },
+          { id: 'g1q1', text: "What percentage of the earth's surface is covered with water?", options: [{id: 'a', text: 'One-fourth'}, {id: 'b', text: 'Three-fourth'}, {id: 'c', text: 'Half'}, {id: 'd', text: 'Two-thirds'}], correctOptionId: 'b', explanation: "Approximately 71% of the Earth's surface is covered with water, which is about three-fourths." },
+          { id: 'g1q2', text: 'What is the main source of freshwater?', options: [{id: 'a', text: 'Oceans'}, {id: 'b', text: 'Surface run off and groundwater'}, {id: 'c', text: 'Glaciers'}, {id: 'd', text: 'Rivers'}], correctOptionId: 'b', explanation: 'Surface runoff and groundwater are the primary accessible sources of freshwater for human use.' },
+          { id: 'g1q3', text: 'What is the main reason for water scarcity in most cases?', options: [{id: 'a', text: 'Low rainfall'}, {id: 'b', text: 'Over-exploitation and excessive use'}, {id: 'c', text: 'Unequal access to water'}, {id: 'd', text: 'All of the above'}], correctOptionId: 'd', explanation: 'Water scarcity is often a combination of low rainfall, over-exploitation, excessive use, and unequal access.' },
+          { id: 'g1q4', text: 'Which sector is the largest consumer of water?', options: [{id: 'a', text: 'Domestic use'}, {id: 'b', text: 'Industrial use'}, {id: 'c', text: 'Irrigated agriculture'}, {id: 'd', text: 'Recreation'}], correctOptionId: 'c', explanation: 'Irrigated agriculture accounts for the largest consumption of freshwater globally.' },
+          { id: 'g1q5', text: 'What is the purpose of dams?', options: [{id: 'a', text: 'To irrigate agricultural fields'}, {id: 'b', text: 'To generate electricity'}, {id: 'c', text: 'To control floods'}, {id: 'd', text: 'All of the above'}], correctOptionId: 'd', explanation: 'Dams serve multiple purposes including irrigation, electricity generation, flood control, and water supply.' },
         ],
       },
       {
         id: 'geo-l2-medium',
-        name: 'Level 2: Continents & Oceans (Medium)',
+        name: 'Level 2: Hydraulic Structures & Water Management (Medium)',
         passingThreshold: 0.6,
         questions: [
-          { id: 'g2q1', text: 'How many continents are there on Earth (commonly accepted model)?', options: [{id: 'a', text: '5'}, {id: 'b', text: '6'}, {id: 'c', text: '7'}], correctOptionId: 'c', explanation: 'The most widely accepted model includes seven continents: Asia, Africa, North America, South America, Antarctica, Europe, and Australia.' },
-          { id: 'g2q2', text: 'Which is the largest ocean on Earth?', options: [{id: 'a', text: 'Atlantic Ocean'}, {id: 'b', text: 'Indian Ocean'}, {id: 'c', text: 'Pacific Ocean'}], correctOptionId: 'c', explanation: 'The Pacific Ocean is the largest and deepest of Earth\'s five oceanic divisions.' },
-          { id: 'g2q3', text: 'The Great Barrier Reef is located off the coast of which country?', options: [{id: 'a', text: 'Brazil'}, {id: 'b', text: 'Australia'}, {id: 'c', text: 'South Africa'}], correctOptionId: 'b', explanation: 'The Great Barrier Reef is the world\'s largest coral reef system, located in the Coral Sea, off the coast of Queensland, Australia.' },
-          { id: 'g2q4', text: 'What is the smallest continent by land area?', options: [{id: 'a', text: 'Europe'}, {id: 'b', text: 'Australia'}, {id: 'c', text: 'South America'}], correctOptionId: 'b', explanation: 'Australia is the smallest continent by land area.' },
-          { id: 'g2q5', text: 'Which imaginary line divides the Earth into the Northern and Southern Hemispheres?', options: [{id: 'a', text: 'Prime Meridian'}, {id: 'b', text: 'Equator'}, {id: 'c', text: 'Tropic of Cancer'}], correctOptionId: 'b', explanation: 'The Equator is an imaginary line drawn around the Earth equally distant from both poles, dividing the Earth into northern and southern hemispheres.' }
+          { id: 'g2q1', text: 'What are some examples of hydraulic structures built in ancient India?', options: [{id: 'a', text: 'Sringaverapura water harvesting system'}, {id: 'b', text: 'Chandragupta Maurya\'s dams and irrigation systems'}, {id: 'c', text: 'Bhopal Lake'}, {id: 'd', text: 'Hauz Khas tank'}], correctOptionId: 'a', explanation: 'Ancient India had sophisticated hydraulic structures like the Sringaverapura water harvesting system near Allahabad. Other options are also historical water bodies/systems from different periods.' },
+          { id: 'g2q2', text: 'How are dams classified according to their height?', options: [{id: 'a', text: 'Low, medium height, and high'}, {id: 'b', text: 'Large, major, and minor'}, {id: 'c', text: 'Timber, embankment, and masonry'}, {id: 'd', text: 'Permanent, temporary, and seasonal'}], correctOptionId: 'a', explanation: 'Dams can be classified based on their height into low, medium height, and high dams.' },
+          { id: 'g2q3', text: 'What is the advantage of multi-purpose projects?', options: [{id: 'a', text: 'They integrate different uses of water'}, {id: 'b', text: 'They reduce the cost of construction'}, {id: 'c', text: 'They increase the efficiency of water use'}, {id: 'd', text: 'They promote economic development'}], correctOptionId: 'a', explanation: 'Multi-purpose projects are designed to serve several objectives simultaneously, such as irrigation, flood control, and power generation.' },
+          { id: 'g2q4', text: 'What is the main reason behind the over-exploitation of water resources?', options: [{id: 'a', text: 'Growing population and increased demand'}, {id: 'b', text: 'Climate change'}, {id: 'c', text: 'Industrial pollution'}, {id: 'd', text: 'Lack of proper infrastructure'}], correctOptionId: 'a', explanation: 'A growing population and the subsequent increased demand for water for domestic, agricultural, and industrial uses are primary drivers of over-exploitation.' },
+          { id: 'g2q5', text: 'What are some ways to conserve and manage water?', options: [{id: 'a', text: 'Constructing dams'}, {id: 'b', text: 'Developing drought-resistant crops'}, {id: 'c', text: 'Using water-efficient technologies'}, {id: 'd', text: 'All of the above'}], correctOptionId: 'd', explanation: 'Water conservation and management involve various strategies including building storage, using drought-resistant crops, and adopting water-efficient technologies.' }
         ],
       },
       {
         id: 'geo-l3-hard',
-        name: 'Level 3: Climate & Topography (Hard)',
+        name: 'Level 3: Major Projects & Water Issues (Hard)',
         passingThreshold: 0.6,
         questions: [
-          { id: 'g3q1', text: 'What type of climate is typically found near the Earth\'s equator?', options: [{id: 'a', text: 'Polar'}, {id: 'b', text: 'Temperate'}, {id: 'c', text: 'Tropical'}], correctOptionId: 'c', explanation: 'Tropical climates are characterized by high temperatures and significant precipitation, typical of equatorial regions.' },
-          { id: 'g3q2', text: 'A fjord is a long, narrow, deep inlet of the sea between high cliffs, typically formed by what?', options: [{id: 'a', text: 'Volcanic activity'}, {id: 'b', text: 'Submergence of a glaciated valley'}, {id: 'c', text: 'River erosion'}], correctOptionId: 'b', explanation: 'Fjords are formed when a glacier cuts a U-shaped valley by ice segregation and abrasion of the surrounding bedrock.' },
-          { id: 'g3q3', text: 'The Ring of Fire is an area in the basin of the Pacific Ocean where a large number of what occur?', options: [{id: 'a', text: 'Hurricanes'}, {id: 'b', text: 'Tornadoes'}, {id: 'c', text: 'Earthquakes and volcanic eruptions'}], correctOptionId: 'c', explanation: 'The Ring of Fire is a major area in the basin of the Pacific Ocean where many earthquakes and volcanic eruptions occur.' },
-          { id: 'g3q4', text: 'What is a monsoon?', options: [{id: 'a', text: 'A type of desert'}, {id: 'b', text: 'A seasonal prevailing wind in the region of South and Southeast Asia'}, {id: 'c', text: 'A mountain range'}], correctOptionId: 'b', explanation: 'A monsoon is a seasonal change in the direction of the prevailing winds of a region, often associated with heavy rainfall.' },
-          { id: 'g3q5', text: 'What is "permafrost"?', options: [{id: 'a', text: 'A type of cloud'}, {id: 'b', text: 'A layer of soil that remains frozen throughout the year'}, {id: 'c', text: 'A warm ocean current'}], correctOptionId: 'b', explanation: 'Permafrost is ground, including rock or soil, that remains at or below 0°C (32°F) for at least two consecutive years.' }
+          { id: 'g3q1', text: 'What is the significance of the Bhakra-Nangal project?', options: [{id: 'a', text: 'It is India\'s largest multi-purpose project.'}, {id: 'b', text: 'It integrates water conservation with flood control.'}, {id: 'c', text: 'It provides water for irrigation and electricity generation.'}, {id: 'd', text: 'It is a major tourist attraction.'}], correctOptionId: 'a', explanation: 'The Bhakra-Nangal project is one of India\'s earliest and largest multi-purpose river valley projects, significant for irrigation and power.' },
+          { id: 'g3q2', text: 'How did Jawaharlal Nehru view dams?', options: [{id: 'a', text: 'As symbols of modern India'}, {id: 'b', text: 'As a solution to all water problems'}, {id: 'c', text: 'As a waste of resources'}, {id: 'd', text: 'As a threat to the environment'}], correctOptionId: 'a', explanation: 'Jawaharlal Nehru famously referred to dams as the "temples of modern India," viewing them as crucial for development.' },
+          { id: 'g3q3', text: 'What is the purpose of a spillway in a dam?', options: [{id: 'a', text: 'To prevent the dam from overflowing'}, {id: 'b', text: 'To release excess water'}, {id: 'c', text: 'To generate electricity'}, {id: 'd', text: 'To create a reservoir'}], correctOptionId: 'b', explanation: 'A spillway is designed to safely release excess floodwater from a reservoir to prevent the dam from overtopping.' },
+          { id: 'g3q4', text: 'What is the main reason behind the over-exploitation of water resources?', options: [{id: 'a', text: 'Growing population and increased demand'}, {id: 'b', text: 'Climate change'}, {id: 'c', text: 'Industrial pollution'}, {id: 'd', text: 'Lack of proper infrastructure'}], correctOptionId: 'a', explanation: 'A growing population and the subsequent increased demand for water for domestic, agricultural, and industrial uses are primary drivers of over-exploitation. This is a crucial concept often revisited.' },
+          { id: 'g3q5', text: 'What are some ways to conserve and manage water?', options: [{id: 'a', text: 'Constructing dams'}, {id: 'b', text: 'Developing drought-resistant crops'}, {id: 'c', text: 'Using water-efficient technologies'}, {id: 'd', text: 'All of the above'}], correctOptionId: 'd', explanation: 'Comprehensive water conservation and management involve multiple approaches, including infrastructure, agricultural practices, and technological advancements.' }
         ],
       },
     ],
@@ -180,5 +180,7 @@ export const quizSubjects: Subject[] = [
     ],
   }
 ];
+
+    
 
     
